@@ -3,6 +3,7 @@ __pycache__/
 env/
 
 to_download.txt
-downloaded/*
 
-!.gitkeep
+*.mp3
+*.mp4
+*.zip

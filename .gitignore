@@ -2,6 +2,7 @@ __pycache__/
 .vscode/
 env/
 
+to_download.txt
 downloaded/*
 
 !.gitkeep

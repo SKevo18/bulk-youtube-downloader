@@ -1,5 +1,7 @@
 import typing as t
 
+import sys
+import argparse
 import requests
 import os.path
 
@@ -21,7 +23,7 @@ TO_DOWNLOAD = set(video_id.strip() for video_id in open(TO_DOWNLOAD_PATH, 'r'))
 
 
 
-def get_stream(video_id: str, type: t.Literal['autio', 'video']='audio') -> t.Optional[t.Tuple[str, str]]:
+def get_stream(video_id: str, type: t.Literal['audio', 'video']='audio') -> t.Optional[t.Tuple[str, str]]:
     """
         Get the best stream from YouTube video ID.
 
@@ -39,7 +41,7 @@ def get_stream(video_id: str, type: t.Literal['autio', 'video']='audio') -> t.Op
         print(f'Video "{video_id}" couldn\'t be obtained: {str(api_error).splitlines()[0]}')
         return None
 
-    just_mp4 = [stream for stream in video.get_streams(type=type) if stream.mime_type == f'{type}/mp4']
+    just_mp4 = [stream for stream in video.get_streams(type=type) if stream.mime_type == f'{type}/mp4' and stream.video_only == False]
 
     return f"{video.uploader} - {video.title}", sorted(just_mp4, key=lambda stream: stream.quality)[0].url
 
@@ -106,10 +108,19 @@ def zip_all(*args, **kwargs):
 
 
 def main():
-    download_all()
-    print("Downloaded all videos... zipping!")
+    parser = argparse.ArgumentParser(description='Downloads videos from YouTube.')
+    parser.add_argument('--stream-type', '--type', '-t', choices=['audio', 'video'], default='audio', help='The type of stream to download.')
+    parser.add_argument('--zip' ,'-z', action='store_true', help='Zip the downloaded files.')
 
-    zip_all()
+    args = parser.parse_args()
+
+    download_all(type=args.stream_type)
+    print(f"Downloaded all {'audios' if args.stream_type == 'audio' else 'videos'}...")
+
+    if args.zip:
+        print("Zipping...")
+        zip_all()
+    
     print("Done!")
 
 

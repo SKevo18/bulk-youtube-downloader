@@ -64,9 +64,8 @@ async def download(url: str, session: aiohttp.ClientSession, semaphore: Semaphor
                     async for chunk in response.content.iter_any():
                         await f.write(chunk)
                 
-                except aiohttp.ClientPayloadError as exception:
+                except Exception as exception:
                     typer.echo(f"Couldn't download {download_to.parts[-1]}: {exception}")
-                    download_to.unlink() # remove broken file
 
 
 
@@ -82,12 +81,12 @@ def run_async(func: t.Callable):
 
 
 
-def main(stream_type: t.Literal['audio', 'video']='audio'):
+def main(stream_type: str='audio'):
     async def _main():
         tasks = []
         semaphore = Semaphore(MAX_TASKS)
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(headers={'Connection': 'keep-alive'}) as session:
             for video_id in TO_DOWNLOAD:
                 packed_stream = get_stream(video_id, stream_type=stream_type)
 
@@ -114,4 +113,4 @@ def main(stream_type: t.Literal['audio', 'video']='audio'):
 
 
 if __name__ == "__main__":
-    typer.run(main())
+    typer.run(main)

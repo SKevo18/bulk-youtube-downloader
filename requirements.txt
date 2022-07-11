@@ -1,2 +1,5 @@
-piped-api
-pycurl
+piped_api
+typer
+
+aiohttp
+aiofiles

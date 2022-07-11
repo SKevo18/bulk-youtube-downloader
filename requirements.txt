@@ -2,4 +2,4 @@ piped_api
 typer
 
 aiohttp
-aiofiles
+aiofile

@@ -2,7 +2,7 @@ import typing as t
 
 import typer
 import aiohttp
-import aiofiles
+import aiofile
 
 from asyncio import Semaphore, sleep, run, wait_for, gather, set_event_loop_policy, WindowsSelectorEventLoopPolicy
 from functools import wraps
@@ -27,6 +27,7 @@ MAX_TASKS = 5
 """Maximum number of concurrent downloads."""
 
 TO_DOWNLOAD = set(video_id.strip() for video_id in open(TO_DOWNLOAD_PATH, 'r'))
+"""List of YouTube IDs to download"""
 
 
 
@@ -56,16 +57,19 @@ def get_stream(video_id: str, stream_type: t.Literal['audio', 'video']='audio') 
 
 async def download(url: str, session: aiohttp.ClientSession, semaphore: Semaphore, download_to: Path):
     async with semaphore:
-        async with session.get(url, timeout=None) as response:
-            async with aiofiles.open(download_to, 'wb') as f:
+        async with session.get(url) as response:
+            async with aiofile.async_open(download_to, 'wb') as f:
                 typer.echo(f"Downloading {download_to.parts[-1]}...")
 
-                try:
-                    async for chunk in response.content.iter_any():
-                        await f.write(chunk)
-                
-                except Exception as exception:
-                    typer.echo(f"Couldn't download {download_to.parts[-1]}: {exception}")
+                # download file (by copilot, as if it worked at avoiding above error lol):
+                # edit: no it doesn't work
+                while True:
+                    # FIXME: Fix stupid ClientPayloadError: Response payload is not complete
+                    chunk = await response.content.read(DOWNLOAD_MB * 1024 * 1024)
+                    if not chunk:
+                        break
+                    await f.write(chunk)
+                    await sleep(0.1)
 
 
 
@@ -86,7 +90,7 @@ def main(stream_type: str='audio'):
         tasks = []
         semaphore = Semaphore(MAX_TASKS)
 
-        async with aiohttp.ClientSession(headers={'Connection': 'keep-alive'}) as session:
+        async with aiohttp.ClientSession(headers={'Connection': 'keep-alive'}, timeout=aiohttp.ClientTimeout(total=60*60, sock_read=480)) as session:
             for video_id in TO_DOWNLOAD:
                 packed_stream = get_stream(video_id, stream_type=stream_type)
 
@@ -105,7 +109,7 @@ def main(stream_type: str='audio'):
 
             await gather(*tasks)
         
-        typer.echo(f"Downloaded all {stream_type}s...")
+        typer.echo(f"Done!")
 
     set_event_loop_policy(WindowsSelectorEventLoopPolicy())
     run(_main())
